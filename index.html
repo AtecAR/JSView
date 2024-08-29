@@ -1,130 +1,161 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WebAR Project</title>
-  <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-  <script src="https://cdn.rawgit.com/jeromeetienne/AR.js/3.3.2/aframe/build/aframe-ar.js"></script>
-  <script src="https://cdn.rawgit.com/mrdoob/three.js/r123/build/three.min.js"></script>
-  <style>
-    .controls {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 10px;
-    }
-    .controls input[type=range] {
-      width: 150px;
-    }
-    .controls button {
-      padding: 10px 20px;
-      font-size: 16px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Web App</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        .button-container {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+        }
+        .button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            margin: 5px 0;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .controls {
+            position: absolute;
+            top: 70px;
+            left: 10px;
+            display: flex;
+            flex-direction: column;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .controls input {
+            width: 60px;
+            margin: 0 5px;
+        }
+    </style>
+    <!-- A-Frame -->
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <!-- AR.js -->
+    <script src="https://cdn.rawgit.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
-  <a-scene embedded arjs>
-    <!-- マーカーとモデルの設定 -->
-    <a-marker type="pattern" url="assets/mark.patt" id="marker">
-      <a-entity id="model" position="0 0 0" scale="1 1 1" rotation="0 0 0" gltf-model="url(assets/model.glb)">
-      </a-entity>
-    </a-marker>
-    <a-entity camera></a-entity>
-  </a-scene>
+    <!-- A-Frame Scene -->
+    <a-scene
+        embedded
+        arjs="sourceType: webcam; trackingMethod: best; debugUIEnabled: false;"
+        renderer="logarithmicDepthBuffer: true;"
+        vr-mode-ui="enabled: false;"
+    >
+        <!-- Assets -->
+        <a-assets>
+            <a-asset-item id="model" src="model.glb"></a-asset-item>
+        </a-assets>
 
-  <!-- 位置、大きさ、方向の調整用スライダー -->
-  <div class="controls">
-    <div>
-      <label>位置X</label>
-      <input id="positionX" type="range" min="-5" max="5" step="0.1" value="0">
+        <!-- Marker -->
+        <a-marker type="pattern" url="mark.patt">
+            <a-entity
+                id="ar-model"
+                gltf-model="#model"
+                scale="1 1 1"
+                position="0 0 0"
+                rotation="0 0 0"
+                class="clickable"
+            ></a-entity>
+        </a-marker>
+
+        <!-- Camera -->
+        <a-entity camera></a-entity>
+    </a-scene>
+
+    <!-- Controls -->
+    <div class="button-container">
+        <button class="button" id="fix-button">固定</button>
+        <button class="button" id="reset-button">リセット</button>
     </div>
-    <div>
-      <label>位置Y</label>
-      <input id="positionY" type="range" min="-5" max="5" step="0.1" value="0">
+
+    <div class="controls">
+        <label>X: <input type="number" id="x" value="0" step="0.01" min="-5" max="5"></label>
+        <label>Y: <input type="number" id="y" value="0" step="0.01" min="-5" max="5"></label>
+        <label>Z: <input type="number" id="z" value="0" step="0.01" min="-5" max="5"></label>
+        <label>Size: <input type="number" id="size" value="1" step="0.1" min="0.1" max="10"></label>
+        <label>Rotation: <input type="number" id="rotation" value="0" step="1" min="0" max="360"></label>
     </div>
-    <div>
-      <label>位置Z</label>
-      <input id="positionZ" type="range" min="-5" max="5" step="0.1" value="0">
-    </div>
-    <div>
-      <label>スケール</label>
-      <input id="scale" type="range" min="0.1" max="3" step="0.1" value="1">
-    </div>
-    <div>
-      <label>回転</label>
-      <input id="rotation" type="range" min="0" max="360" step="1" value="0">
-    </div>
-    <button id="fixButton">固定</button>
-  </div>
 
-  <script>
-    // モデル固定のための変数
-    let isModelFixed = false;
-    let fixedPosition = { x: 0, y: 0, z: 0 };
-    let fixedScale = { x: 1, y: 1, z: 1 };
-    let fixedRotation = { x: 0, y: 0, z: 0 };
+    <script>
+        const modelEntity = document.querySelector('#ar-model');
+        const xInput = document.querySelector('#x');
+        const yInput = document.querySelector('#y');
+        const zInput = document.querySelector('#z');
+        const sizeInput = document.querySelector('#size');
+        const rotationInput = document.querySelector('#rotation');
+        const fixButton = document.querySelector('#fix-button');
+        const resetButton = document.querySelector('#reset-button');
 
-    const marker = document.querySelector("#marker");
-    const model = document.querySelector("#model");
-    const fixButton = document.querySelector("#fixButton");
+        let fixed = false;
+        let fixedAttributes = {};
 
-    // スライダーの要素を取得
-    const positionX = document.getElementById('positionX');
-    const positionY = document.getElementById('positionY');
-    const positionZ = document.getElementById('positionZ');
-    const scale = document.getElementById('scale');
-    const rotation = document.getElementById('rotation');
+        // Update model position, size, and rotation
+        function updateModel() {
+            if (modelEntity) {
+                modelEntity.setAttribute('position', `${xInput.value} ${yInput.value} ${zInput.value}`);
+                modelEntity.setAttribute('scale', `${sizeInput.value} ${sizeInput.value} ${sizeInput.value}`);
+                modelEntity.setAttribute('rotation', `0 ${rotationInput.value} 0`);
+            }
+        }
 
-    // モデルの位置、大きさ、方向を固定
-    fixButton.addEventListener("click", () => {
-      if (marker.object3D.visible) {
-        fixedPosition = model.object3D.position.clone();
-        fixedScale = model.object3D.scale.clone();
-        fixedRotation = model.object3D.rotation.clone();
-        isModelFixed = true;
-        alert("モデルが固定されました。");
-      } else {
-        alert("マーカーを表示させた状態で固定してください。");
-      }
-    });
+        xInput.addEventListener('input', updateModel);
+        yInput.addEventListener('input', updateModel);
+        zInput.addEventListener('input', updateModel);
+        sizeInput.addEventListener('input', updateModel);
+        rotationInput.addEventListener('input', updateModel);
 
-    // マーカーの状態に基づいてモデルを表示
-    marker.addEventListener("markerFound", () => {
-      if (!isModelFixed) {
-        model.object3D.visible = true;
-      }
-    });
+        fixButton.addEventListener('click', () => {
+            if (modelEntity) {
+                fixedAttributes = {
+                    position: modelEntity.getAttribute('position'),
+                    scale: modelEntity.getAttribute('scale'),
+                    rotation: modelEntity.getAttribute('rotation')
+                };
+                fixed = true;
+                announce('モデルが固定されました');
+            }
+        });
 
-    marker.addEventListener("markerLost", () => {
-      if (isModelFixed) {
-        // マーカーが消えてもモデルを固定した位置に残す
-        model.object3D.position.copy(fixedPosition);
-        model.object3D.scale.copy(fixedScale);
-        model.object3D.rotation.copy(fixedRotation);
-      } else {
-        model.object3D.visible = false;
-      }
-    });
+        resetButton.addEventListener('click', () => {
+            if (modelEntity) {
+                modelEntity.setAttribute('position', fixedAttributes.position || '0 0 0');
+                modelEntity.setAttribute('scale', fixedAttributes.scale || '1 1 1');
+                modelEntity.setAttribute('rotation', fixedAttributes.rotation || '0 0 0');
+                updateModel();
+            }
+        });
 
-    // スライダーでモデルの位置、大きさ、方向を調整
-    positionX.addEventListener('input', () => {
-      model.object3D.position.x = parseFloat(positionX.value);
-    });
-    positionY.addEventListener('input', () => {
-      model.object3D.position.y = parseFloat(positionY.value);
-    });
-    positionZ.addEventListener('input', () => {
-      model.object3D.position.z = parseFloat(positionZ.value);
-    });
-    scale.addEventListener('input', () => {
-      model.object3D.scale.set(parseFloat(scale.value), parseFloat(scale.value), parseFloat(scale.value));
-    });
-    rotation.addEventListener('input', () => {
-      model.object3D.rotation.y = THREE.Math.degToRad(parseFloat(rotation.value));
-    });
-  </script>
+        function announce(message) {
+            const announcement = document.createElement('div');
+            announcement.style.position = 'absolute';
+            announcement.style.bottom = '10px';
+            announcement.style.left = '10px';
+            announcement.style.padding = '10px';
+            announcement.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+            announcement.style.color = 'white';
+            announcement.innerText = message;
+            document.body.appendChild(announcement);
+            setTimeout(() => {
+                announcement.remove();
+            }, 3000);
+        }
+    </script>
 </body>
 </html>
