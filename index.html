@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebAR Project</title>
+  <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+  <script src="https://cdn.rawgit.com/jeromeetienne/AR.js/3.3.2/aframe/build/aframe-ar.js"></script>
+  <script src="https://cdn.rawgit.com/mrdoob/three.js/r123/build/three.min.js"></script>
+  <style>
+    .controls {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+    }
+    .controls input[type=range] {
+      width: 150px;
+    }
+    .controls button {
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <a-scene embedded arjs>
+    <!-- マーカーとモデルの設定 -->
+    <a-marker type="pattern" url="assets/mark.patt" id="marker">
+      <a-entity id="model" position="0 0 0" scale="1 1 1" rotation="0 0 0" gltf-model="url(assets/model.glb)">
+      </a-entity>
+    </a-marker>
+    <a-entity camera></a-entity>
+  </a-scene>
+
+  <!-- 位置、大きさ、方向の調整用スライダー -->
+  <div class="controls">
+    <div>
+      <label>位置X</label>
+      <input id="positionX" type="range" min="-5" max="5" step="0.1" value="0">
+    </div>
+    <div>
+      <label>位置Y</label>
+      <input id="positionY" type="range" min="-5" max="5" step="0.1" value="0">
+    </div>
+    <div>
+      <label>位置Z</label>
+      <input id="positionZ" type="range" min="-5" max="5" step="0.1" value="0">
+    </div>
+    <div>
+      <label>スケール</label>
+      <input id="scale" type="range" min="0.1" max="3" step="0.1" value="1">
+    </div>
+    <div>
+      <label>回転</label>
+      <input id="rotation" type="range" min="0" max="360" step="1" value="0">
+    </div>
+    <button id="fixButton">固定</button>
+  </div>
+
+  <script>
+    // モデル固定のための変数
+    let isModelFixed = false;
+    let fixedPosition = { x: 0, y: 0, z: 0 };
+    let fixedScale = { x: 1, y: 1, z: 1 };
+    let fixedRotation = { x: 0, y: 0, z: 0 };
+
+    const marker = document.querySelector("#marker");
+    const model = document.querySelector("#model");
+    const fixButton = document.querySelector("#fixButton");
+
+    // スライダーの要素を取得
+    const positionX = document.getElementById('positionX');
+    const positionY = document.getElementById('positionY');
+    const positionZ = document.getElementById('positionZ');
+    const scale = document.getElementById('scale');
+    const rotation = document.getElementById('rotation');
+
+    // モデルの位置、大きさ、方向を固定
+    fixButton.addEventListener("click", () => {
+      if (marker.object3D.visible) {
+        fixedPosition = model.object3D.position.clone();
+        fixedScale = model.object3D.scale.clone();
+        fixedRotation = model.object3D.rotation.clone();
+        isModelFixed = true;
+        alert("モデルが固定されました。");
+      } else {
+        alert("マーカーを表示させた状態で固定してください。");
+      }
+    });
+
+    // マーカーの状態に基づいてモデルを表示
+    marker.addEventListener("markerFound", () => {
+      if (!isModelFixed) {
+        model.object3D.visible = true;
+      }
+    });
+
+    marker.addEventListener("markerLost", () => {
+      if (isModelFixed) {
+        // マーカーが消えてもモデルを固定した位置に残す
+        model.object3D.position.copy(fixedPosition);
+        model.object3D.scale.copy(fixedScale);
+        model.object3D.rotation.copy(fixedRotation);
+      } else {
+        model.object3D.visible = false;
+      }
+    });
+
+    // スライダーでモデルの位置、大きさ、方向を調整
+    positionX.addEventListener('input', () => {
+      model.object3D.position.x = parseFloat(positionX.value);
+    });
+    positionY.addEventListener('input', () => {
+      model.object3D.position.y = parseFloat(positionY.value);
+    });
+    positionZ.addEventListener('input', () => {
+      model.object3D.position.z = parseFloat(positionZ.value);
+    });
+    scale.addEventListener('input', () => {
+      model.object3D.scale.set(parseFloat(scale.value), parseFloat(scale.value), parseFloat(scale.value));
+    });
+    rotation.addEventListener('input', () => {
+      model.object3D.rotation.y = THREE.Math.degToRad(parseFloat(rotation.value));
+    });
+  </script>
+</body>
+</html>
